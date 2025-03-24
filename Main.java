@@ -1,89 +1,156 @@
-//Класс MyHashSet основан на работе стандартного HashSet и наследуется от AbstractSet. Работает идентично оригинальному классу
-//Класс MyArrayList это моя попытка сделать упрощённый ArrayList на основе массивов. И реализующим методы add, addAll, remove, get
+import org.w3c.dom.Node;
+
 import java.util.*;
 
-class MyHashSet extends AbstractSet<Integer>{
-    private final HashSet<Integer> hashset = new HashSet<>();
-    private final int max;
-    private final int min;
-    public MyHashSet(int min, int max){
-        this.min = min;
-        this.max = max;
-    }
-    public int getMax(){
-        return max;
-    }
-    public int getMin(){
-        return min;
+class MyHashSet {
+    private static final int SIZE = 16;
+    private static final float LOAD = 0.8f;
+
+    private Node[] buckets;
+    private int size;
+
+    public MyHashSet(int min, int max) {
+        buckets = new Node[SIZE];
+        size = 0;
     }
 
-    @Override
-    public Iterator<Integer> iterator() {
-        return hashset.iterator();
+    private static class Node {
+        int value;
+        Node next;
+
+        Node(int value) {
+            this.value = value;
+        }
     }
 
-    @Override
-    public int size() {
-        return hashset.size();
+
+    public void add(int value) {
+        if (contains(value)) {
+            return;
+        }
+        int index = getIndex(value);
+        Node newNode = new Node(value);
+        newNode.next = buckets[index];
+        buckets[index] = newNode;
+        size += 1;
+        if (size > LOAD * buckets.length) {
+            rehash();
+        }
     }
-    private void checkAddArgument(Integer x) {
-        if (x == null) throw new IllegalArgumentException("null нельзя положить в коллекцию");
-        if (x < min) throw new IllegalArgumentException("Меньше минимального значения");
-        if (max < x) throw new IllegalArgumentException("Больше максимального значения");
+
+    public void remove(int value) {
+        int index = getIndex(value);
+        Node head = buckets[index];
+        Node prev = null;
+
+        while (head != null) {
+            if (head.value == value) {
+                if (prev == null) {
+                    buckets[index] = head.next;
+                } else {
+                    prev.next = head.next;
+                }
+                size -= 1;
+                return;
+            }
+            prev = head;
+            head = head.next;
+        }
     }
-    @Override
-    public boolean add(Integer a) {
-        checkAddArgument(a);
-        return hashset.add(a);
+
+    private int getIndex(int value) {
+        return hash(value) % (buckets.length - 1);
     }
-    @Override
-    public boolean remove(Object o) {
-        return hashset.remove(o);
+
+    private void rehash() {
+        Node[] oldBuckets = buckets;
+        buckets = new Node[2 * oldBuckets.length];
+        size = 0;
+
+        for (Node head : oldBuckets) {
+            while (head != null) {
+                add(head.value);
+                head = head.next;
+            }
+        }
+    }
+
+    private int hash(int value) {
+        int hash = value * buckets.length;
+        return hash ^ (hash >>> 16);
+    }
+
+    public boolean contains(int value) {
+        int index = getIndex(value);
+        Node head = buckets[index];
+        //Проверка на существование элемента
+        while (head != null) {
+            if (head.value == value) {
+                return true;
+            }
+            head = head.next;
+        }
+        return false;
     }
 }
-class MyArrayList{
-    private int[] mas = new int[10];
+
+
+class MyArrayList {
+    private static final int SIZE = 10;
+
+    private int[] mas = new int[SIZE];
     private int elements = 0;
 
     MyArrayList() {
     }
 
-    void add(Integer x) {
+    public void add(int x) {
         mas[elements] = x;
         elements += 1;
     }
 
-    int get(int i) {
+    public int get(int i) {
+        checkIndex(i);
         return mas[i];
     }
 
-    void remove(int x) {
+    public void remove(int x) {
+        checkIndex(x);
         for (int i = x; i < elements; i++) {
             mas[i] = mas[i + 1];
         }
         elements -= 1;
     }
 
+    @Override
     public String toString() {
-        return Arrays.toString(mas);
+        return Arrays.toString(Arrays.copyOf(mas, elements));
     }
 
-    void addAll(int[] x) {
+    public void addAll(int[] x) {
         for (int i = 0; i < x.length; i++) {
             mas[elements] = x[i];
             elements += 1;
         }
     }
 
+    private void checkIndex(int i) {
+        if (i < 0 || i >= elements) {
+            throw new IndexOutOfBoundsException("Index: " + i + "elements:" + elements);
+        }
+    }
+
 }
+
 public class Main {
     public static void main(String[] args) {
         MyHashSet myHashSet = new MyHashSet(1, 10);
         myHashSet.add(5);
         myHashSet.add(8);
-        System.out.println(myHashSet); //Добавляем в коллекцию элементы 5 и 8 и выводим на экран
+        System.out.println(myHashSet.contains(8));
         myHashSet.remove(8);
-        System.out.println(myHashSet);//Убираем из коллекции элемент 8 и выводим коллекцию на экран
+        System.out.println(myHashSet.contains(8));
+        System.out.println(myHashSet.contains(5));
 
         MyArrayList list = new MyArrayList();
         list.add(1);
